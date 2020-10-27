@@ -16,7 +16,9 @@ end
 function love.load()
   HexCoord = require('hexcoord')
   HashTable = require('hashtable')
+
   hex = love.graphics.newImage("hex.png")
+  selectedHex = love.graphics.newImage("hex-selected.png")
   HEX_DIMENSIONS = {
     90 / hex:getHeight(), -- sx
     90 / hex:getHeight(), -- sy
@@ -24,10 +26,12 @@ function love.load()
     hex:getHeight() / 2 -- oy
   }
 
-  selectedHex = love.graphics.newImage("hex-selected.png")
-  love.window.setMode(450, 800, {["centered"] = true, ["resizable"] = false})
+  local screen_w = 450
+  local screen_h = 800
+  love.window.setMode(screen_w, screen_h, {["centered"] = true, ["resizable"] = false})
 
   field = buildField()
+  field.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
 end
 
 
@@ -60,7 +64,7 @@ end
 
 function drawField()
   love.graphics.push()
-  love.graphics.translate(225, 400)
+  love.graphics.applyTransform(field.transform)
 
   for coord, hex in field:each() do
     local position = coord:pixelCoordinates(50)
