@@ -85,6 +85,8 @@ function Selection:new(center, selected)
     ["center"] = center,
     ["selected"] = selected,
     ["z"] = 0,
+    ["rotation"] = 0,
+    ["rotationVelocity"] = 0,
     ["transform"] = love.math.newTransform()
   }
   setmetatable(obj, self)
@@ -92,11 +94,96 @@ function Selection:new(center, selected)
   return obj
 end
 
-function Selection:setZ(value)
-  self.z = value
-  self.transform = love.math.newTransform(0, -value)
+function Selection:calcTransform()
+  self.transform = love.math.newTransform(0, -self.z, self.rotation)
 end
 
+function Selection:setZ(value)
+  self.z = value
+  self:calcTransform()
+end
+
+function Selection:setRotation(value)
+  self.rotation = value
+  self:calcTransform()
+end
+
+function Selection:calcCenterCoords()
+  local coords = self.center:pixelCoordinates(HEX_SIZE)
+  local x, y = field.transform:transformPoint(coords.x, coords.y)
+  self.x, self.y = self.transform:transformPoint(x, y)
+end
+
+function Selection:calcMouseAngle(x, y)
+  local offsetX = x - self.x
+  local offsetY = y - self.y
+  local result = math.acos(- offsetY / math.sqrt(offsetX * offsetX + offsetY * offsetY))
+  if offsetX < 0 then
+    result = 2 * math.pi - result
+  end
+  self.mouseAngle = result
+end
+
+function Selection:calcTargetRotation()
+  local dragRotation = angleDiff(self.dragStartAngle, self.mouseAngle)
+  local snappedDragRotation = snapRotation(dragRotation)
+  self.targetRotation = self.dragStartRotation + snappedDragRotation
+end
+
+function Selection:calcRotationVelocity(dt)
+  local force = angleDiff(self.rotation, self.targetRotation)
+  local damping = - self.rotationVelocity * 10
+  self.rotationVelocity = self.rotationVelocity + dt * (force + damping)
+end
+
+function Selection:handleSnap()
+  local diffToTargetRotation = math.abs(angleDiff(self.rotation, self.targetRotation))
+  if diffToTargetRotation < DEG_1 and math.abs(self.rotationVelocity) < 0.01 then
+    self:setRotation(self.targetRotation)
+    self.rotationVelocity = 0
+  end
+end
+
+DEG_360 = 2 * math.pi
+DEG_60 = math.pi / 3
+DEG_90 = math.pi / 2
+DEG_180 = math.pi
+DEG_1 = math.pi / 180
+
+function snapRotation(radians)
+  return math.floor((radians % DEG_360) / DEG_60 + 0.5) * DEG_60
+end
+
+function angleDiff(startAngle, endAngle)
+  local normalizedStart = startAngle
+  local normalizedEnd = endAngle
+  while math.abs(normalizedEnd - normalizedStart) > DEG_180 do
+    normalizedStart = (normalizedStart + DEG_90) % DEG_360
+    normalizedEnd = (normalizedEnd + DEG_90) % DEG_360
+  end
+  return normalizedEnd - normalizedStart
+end
+
+function love.mousepressed(x, y, button, istouch, presses)
+  if mode == "NOT_DRAGGING" then
+    local fieldX, fieldY = selection.transform:inverseTransformPoint(x, y)
+    fieldX, fieldY = field.transform:inverseTransformPoint(fieldX, fieldY)
+    local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
+    local clickedHex = field:get(hexCoord)
+    if clickedHex.selected then
+      selection:calcMouseAngle(x, y)
+      selection.dragStartAngle = selection.mouseAngle
+      selection.dragStartRotation = snapRotation(selection.rotation)
+      mode = "DRAGGING"
+    end
+  end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+  if mode == "DRAGGING" then
+    selection:calcMouseAngle(x, y)
+  end
+end
 
 function love.mousereleased(x, y, button, istouch, presses)
   if mode == "UNSELECTED" then
@@ -115,6 +202,8 @@ function love.mousereleased(x, y, button, istouch, presses)
   elseif mode == "NOT_DRAGGING" then
     mode = "SINKING_ANIMATION"
     animation_progress = 0
+  elseif mode == "DRAGGING" then
+    mode = "NOT_DRAGGING"
   end
 end
 
@@ -131,6 +220,7 @@ function love.update(dt)
     selection:setZ(lerp(0, RISE_HEIGHT, animation_progress))
     if selection.z >= RISE_HEIGHT then
       selection:setZ(RISE_HEIGHT)
+      selection:calcCenterCoords()
       mode = "NOT_DRAGGING"
     end
   elseif mode == "SINKING_ANIMATION" then
@@ -145,6 +235,11 @@ function love.update(dt)
       end
       selection = nil
     end
+  elseif mode == "DRAGGING" then
+    selection:calcTargetRotation()
+    selection:calcRotationVelocity(dt)
+    selection:setRotation(selection.rotation + selection.rotationVelocity)
+    selection:handleSnap()
   end
 end
 
