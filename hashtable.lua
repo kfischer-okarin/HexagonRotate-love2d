@@ -1,11 +1,10 @@
 -- Extended Lua Table which hashes keys before inserting/getting them
 local HashTable = {}
 
-HashTable.__index = HashTable
-
 function HashTable:new()
   result = {["__keysByHash"] = {}}
-  setmetatable(result, HashTable)
+  setmetatable(result, self)
+  self.__index = self
   return result
 end
 
