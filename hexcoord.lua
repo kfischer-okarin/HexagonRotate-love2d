@@ -77,13 +77,11 @@ function HexCoord:neighbors()
   }
 end
 
-local DEG_60 = math.pi / 3
-
 function HexCoord:rotate(degrees, rotationCenter)
   local dx = self.x - rotationCenter.x
   local dy = self.y - rotationCenter.y
   local dz = self.z - rotationCenter.z
-  for rotations=1, util.round(degrees / DEG_60) do
+  for rotations=1, util.round(degrees / util.DEG_60) do
     local oldX = dx
     dx = -dz
     dz = -dy

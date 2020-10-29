@@ -128,20 +128,20 @@ function Selection:startRotation(x, y)
 end
 
 function Selection:calcTargetRotation()
-  local dragRotation = angleDiff(self.dragStartAngle, self.mouseAngle)
+  local dragRotation = util.angleDiff(self.dragStartAngle, self.mouseAngle)
   local snappedDragRotation = snapRotation(dragRotation)
   self.targetRotation = self.dragStartRotation + snappedDragRotation
 end
 
 function Selection:calcRotationVelocity(dt)
-  local force = angleDiff(self.rotation, self.targetRotation)
+  local force = util.angleDiff(self.rotation, self.targetRotation)
   local damping = - self.rotationVelocity * 10
   self.rotationVelocity = self.rotationVelocity + dt * (force + damping)
 end
 
 function Selection:handleSnap()
-  local diffToTargetRotation = math.abs(angleDiff(self.rotation, self.targetRotation))
-  if diffToTargetRotation < DEG_1 and math.abs(self.rotationVelocity) < DEG_1 then
+  local diffToTargetRotation = math.abs(util.angleDiff(self.rotation, self.targetRotation))
+  if diffToTargetRotation < util.DEG_1 and math.abs(self.rotationVelocity) < util.DEG_1 then
     self:setRotation(self.targetRotation)
     self.rotationVelocity = 0
   end
@@ -153,24 +153,8 @@ function Selection:handleRotation(dt)
   self:handleSnap()
 end
 
-DEG_360 = 2 * math.pi
-DEG_180 = math.pi
-DEG_90 = math.pi / 2
-DEG_60 = math.pi / 3
-DEG_1 = math.pi / 180
-
 function snapRotation(radians)
-  return util.round((radians % DEG_360) / DEG_60) * DEG_60
-end
-
-function angleDiff(startAngle, endAngle)
-  local normalizedStart = startAngle
-  local normalizedEnd = endAngle
-  while math.abs(normalizedEnd - normalizedStart) > DEG_180 do
-    normalizedStart = (normalizedStart + DEG_90) % DEG_360
-    normalizedEnd = (normalizedEnd + DEG_90) % DEG_360
-  end
-  return normalizedEnd - normalizedStart
+  return util.round((radians % util.DEG_360) / util.DEG_60) * util.DEG_60
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
@@ -218,15 +202,10 @@ end
 
 RISE_DURATION = 0.2
 
-function lerp(a, b, t)
-  local clampedT = math.min(math.max(0, t), 1)
-  return a * (1 - clampedT) + b * clampedT
-end
-
 function love.update(dt)
   if g.mode == "RISING_ANIMATION" then
     g.animation_progress = g.animation_progress + dt / RISE_DURATION
-    g.selection:setZ(lerp(0, RISE_HEIGHT, g.animation_progress))
+    g.selection:setZ(util.lerp(0, RISE_HEIGHT, g.animation_progress))
     if g.selection.z >= RISE_HEIGHT then
       g.selection:setZ(RISE_HEIGHT)
       g.selection:calcCenterCoords()
@@ -234,7 +213,7 @@ function love.update(dt)
     end
   elseif g.mode == "SINKING_ANIMATION" then
     g.animation_progress = g.animation_progress + dt / RISE_DURATION
-    g.selection:setZ(lerp(RISE_HEIGHT, 0, g.animation_progress))
+    g.selection:setZ(util.lerp(RISE_HEIGHT, 0, g.animation_progress))
     if g.selection.z <= 0 then
       g.selection:setZ(0)
       g.mode = "UNSELECTED"
