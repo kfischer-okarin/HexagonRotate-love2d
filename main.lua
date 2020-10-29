@@ -109,6 +109,11 @@ function Selection:new(center, selected)
   setmetatable(obj, self)
   self.__index = self
   obj.offsetX, obj.offsetY = obj.center:pixelCoordinates(HEX_SIZE)
+
+  for i, selected in ipairs(selected) do
+    g.field:get(selected).selected = true
+  end
+
   return obj
 end
 
@@ -146,17 +151,17 @@ end
 function Selection:startRotation(x, y)
   self:calcMouseAngle(x, y)
   self.dragStartAngle = self.mouseAngle
-  self.dragStartRotation = snapRotation(self.rotation)
+  self.dragStartRotation = util.snapRotation(self.rotation)
   self.targetRotation = self.dragStartRotation
 end
 
-function Selection:calcTargetRotation()
+function Selection:updateTargetRotation()
   local dragRotation = util.angleDiff(self.dragStartAngle, self.mouseAngle)
-  local snappedDragRotation = snapRotation(dragRotation)
+  local snappedDragRotation = util.snapRotation(dragRotation)
   self.targetRotation = self.dragStartRotation + snappedDragRotation
 end
 
-function Selection:calcRotationVelocity(dt)
+function Selection:updateRotationVelocity(dt)
   local force = util.angleDiff(self.rotation, self.targetRotation)
   local damping = - self.rotationVelocity * 10
   self.rotationVelocity = self.rotationVelocity + dt * (force + damping)
@@ -171,7 +176,7 @@ function Selection:handleSnap()
 end
 
 function Selection:handleRotation(dt)
-  self:calcRotationVelocity(dt)
+  self:updateRotationVelocity(dt)
   self:setRotation(self.rotation + self.rotationVelocity)
   self:handleSnap()
 end
@@ -181,8 +186,19 @@ function Selection:insideSelection(x, y)
   return clickedHex ~= nil and clickedHex.selected
 end
 
-function snapRotation(radians)
-  return util.round((radians % util.DEG_360) / util.DEG_60) * util.DEG_60
+function Selection:applyRotationAndUnselectHexes()
+  local hexesToUpdate = HashTable:new()
+  for i, selected in ipairs(self.selected) do
+    hexesToUpdate:set(selected, g.field:get(selected))
+  end
+
+  for i, selected in ipairs(self.selected) do
+    local hex = hexesToUpdate:get(selected)
+
+    local rotatedCoord = selected:rotate(self.rotation, self.center)
+    g.field:set(rotatedCoord, hex)
+    hex.selected = false
+  end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
@@ -207,9 +223,6 @@ function love.mousereleased(x, y, button, istouch, presses)
 
     if g.field:contains(hexCoord, unpack(neighbors)) then
       g.selection = Selection:new(hexCoord, neighbors)
-      for i, selected in ipairs(neighbors) do
-        g.field:get(selected).selected = true
-      end
       g.mode = "RISING_ANIMATION"
       g.animation_progress = 0
     end
@@ -239,24 +252,13 @@ function love.update(dt)
     g.selection:setZ(util.lerp(RISE_HEIGHT, 0, g.animation_progress))
     if g.selection.z <= 0 then
       g.selection:setZ(0)
-      g.mode = "UNSELECTED"
-
-      local hexes = HashTable:new()
-      for i, selected in ipairs(g.selection.selected) do
-        hexes:set(selected, g.field:get(selected))
-      end
-
-      for i, selected in ipairs(g.selection.selected) do
-        local hex = hexes:get(selected)
-
-        local rotatedCoord = selected:rotate(g.selection.rotation, g.selection.center)
-        g.field:set(rotatedCoord, hex)
-        hex.selected = false
-      end
+      g.selection:applyRotationAndUnselectHexes()
       selection = nil
+
+      g.mode = "UNSELECTED"
     end
   elseif g.mode == "DRAGGING" then
-    g.selection:calcTargetRotation()
+    g.selection:updateTargetRotation()
     g.selection:handleRotation(dt)
   elseif g.mode == "NOT_DRAGGING" then
     g.selection:handleRotation(dt)

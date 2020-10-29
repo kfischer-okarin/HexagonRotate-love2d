@@ -25,4 +25,8 @@ function util.angleDiff(startAngle, endAngle)
   return normalizedEnd - normalizedStart
 end
 
+function util.snapRotation(radians)
+  return util.round((radians % util.DEG_360) / util.DEG_60) * util.DEG_60
+end
+
 return util
