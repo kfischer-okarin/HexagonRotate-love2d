@@ -4,46 +4,6 @@ util = require('util')
 HexCoord = require('hexcoord')
 HashTable = require('hashtable')
 
-function loadImages()
-  g.hexImage = love.graphics.newImage("hex.png")
-  g.selectedHexImage = love.graphics.newImage("hex-selected.png")
-  HEX_SIZE = 50
-  RISE_HEIGHT = HEX_SIZE / 2
-  Hex.dimensions = {
-    90 / g.hexImage:getHeight(), -- sx
-    90 / g.hexImage:getHeight(), -- sy
-    g.hexImage:getWidth() / 2, -- ox
-    g.hexImage:getHeight() / 2 -- oy
-  }
-end
-
-function setWindowSize()
-  SCREEN_W = 450
-  SCREEN_H = 800
-  love.window.setMode(SCREEN_W, SCREEN_H, {["centered"] = true, ["resizable"] = false})
-end
-
-function initializeState()
-  g.mode = "UNSELECTED"
-  g.field = HashTable:new()
-  for x=-2, 2 do
-    for y=-2, 3 do
-      for z=-3, 2 do
-        if (x + y + z) == 0 then
-          g.field:set(HexCoord:new(x, y, z), Hex:new())
-        end
-      end
-    end
-  end
-  g.field.transform = love.math.newTransform(SCREEN_W / 2, SCREEN_H / 2)
-end
-
-function love.load()
-  loadImages()
-  setWindowSize()
-  initializeState()
-end
-
 Hex = {}
 
 function Hex:new()
@@ -69,6 +29,68 @@ function Hex:draw(hexCoord)
   love.graphics.setColor(self.color)
   love.graphics.draw(self:image(), x, y, 0, unpack(self.dimensions))
   love.graphics.setColor(1, 1, 1)
+end
+
+HexField = HashTable:new()
+
+function HexField:new()
+  local field = HashTable:new()
+  field.transform = love.math.newTransform(SCREEN_W / 2, SCREEN_H / 2)
+
+  setmetatable(field, self)
+  self.__index = self
+  return field
+end
+
+function HexField:hexCoordAtPixelCoordinates(pixelX, pixelY)
+  local x, y =  self.transform:inverseTransformPoint(pixelX, pixelY)
+  return HexCoord:fromPixelCoordinate(x, y, HEX_SIZE)
+end
+
+function HexField:hexAtPixelCoordinates(pixelX, pixelY)
+  local hexCoord = self:hexCoordAtPixelCoordinates(pixelX, pixelY)
+  local clickedHex = self:get(hexCoord)
+  return clickedHex, hexCoord
+end
+
+function loadImages()
+  g.hexImage = love.graphics.newImage("hex.png")
+  g.selectedHexImage = love.graphics.newImage("hex-selected.png")
+  HEX_SIZE = 50
+  RISE_HEIGHT = HEX_SIZE / 2
+  Hex.dimensions = {
+    90 / g.hexImage:getHeight(), -- sx
+    90 / g.hexImage:getHeight(), -- sy
+    g.hexImage:getWidth() / 2, -- ox
+    g.hexImage:getHeight() / 2 -- oy
+  }
+end
+
+function setWindowSize()
+  SCREEN_W = 450
+  SCREEN_H = 800
+  love.window.setMode(SCREEN_W, SCREEN_H, {["centered"] = true, ["resizable"] = false})
+end
+
+function initializeState()
+  g.mode = "UNSELECTED"
+  g.field = HexField:new()
+  for x=-2, 2 do
+    for y=-2, 3 do
+      for z=-3, 2 do
+        if (x + y + z) == 0 then
+          g.field:set(HexCoord:new(x, y, z), Hex:new())
+        end
+      end
+    end
+  end
+
+end
+
+function love.load()
+  loadImages()
+  setWindowSize()
+  initializeState()
 end
 
 Selection = {}
@@ -104,7 +126,7 @@ function Selection:setRotation(value)
   self:calcTransform()
 end
 
-function Selection:calcCenterCoords()
+function Selection:calcCenterPixelCoords()
   local x, y = self.center:pixelCoordinates(HEX_SIZE)
   x, y = g.field.transform:transformPoint(x, y)
   self.x, self.y = self.transform:transformPoint(x, y)
@@ -154,17 +176,18 @@ function Selection:handleRotation(dt)
   self:handleSnap()
 end
 
+function Selection:insideSelection(x, y)
+  local clickedHex = g.field:hexAtPixelCoordinates(x, y)
+  return clickedHex ~= nil and clickedHex.selected
+end
+
 function snapRotation(radians)
   return util.round((radians % util.DEG_360) / util.DEG_60) * util.DEG_60
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
   if g.mode == "NOT_DRAGGING" then
-    local fieldX, fieldY = g.selection.transform:inverseTransformPoint(x, y)
-    fieldX, fieldY = g.field.transform:inverseTransformPoint(fieldX, fieldY)
-    local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
-    local clickedHex = g.field:get(hexCoord)
-    if clickedHex ~= nil and clickedHex.selected then
+    if g.selection:insideSelection(x, y) then
       g.selection:startRotation(x, y)
       g.mode = "DRAGGING"
     end
@@ -179,8 +202,7 @@ end
 
 function love.mousereleased(x, y, button, istouch, presses)
   if g.mode == "UNSELECTED" then
-    local fieldX, fieldY = g.field.transform:inverseTransformPoint(x, y)
-    local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
+    local hexCoord = g.field:hexCoordAtPixelCoordinates(x, y)
     local neighbors = hexCoord:neighbors()
 
     if g.field:contains(hexCoord, unpack(neighbors)) then
@@ -209,7 +231,7 @@ function love.update(dt)
     g.selection:setZ(util.lerp(0, RISE_HEIGHT, g.animation_progress))
     if g.selection.z >= RISE_HEIGHT then
       g.selection:setZ(RISE_HEIGHT)
-      g.selection:calcCenterCoords()
+      g.selection:calcCenterPixelCoords()
       g.mode = "NOT_DRAGGING"
     end
   elseif g.mode == "SINKING_ANIMATION" then
