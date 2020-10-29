@@ -1,40 +1,36 @@
+g = {}
+
 HexCoord = require('hexcoord')
 HashTable = require('hashtable')
 
-function buildField()
-  result = HashTable:new()
-  for x=-2, 2 do
-    for y=-2, 3 do
-      for z=-3, 2 do
-        if (x + y + z) == 0 then
-          result:set(HexCoord:new(x, y, z), Hex:new())
-        end
-      end
-    end
-  end
-
-  return result
-end
-
 function love.load()
-  HEX_IMAGE = love.graphics.newImage("hex.png")
-  SELECTED_HEX_IMAGE = love.graphics.newImage("hex-selected.png")
+  g.hexImage = love.graphics.newImage("hex.png")
+  g.selectedHexImage = love.graphics.newImage("hex-selected.png")
   HEX_SIZE = 50
   RISE_HEIGHT = HEX_SIZE / 2
-  HEX_DIMENSIONS = {
-    90 / HEX_IMAGE:getHeight(), -- sx
-    90 / HEX_IMAGE:getHeight(), -- sy
-    HEX_IMAGE:getWidth() / 2, -- ox
-    HEX_IMAGE:getHeight() / 2 -- oy
+  g.hexDimensions = {
+    90 / g.hexImage:getHeight(), -- sx
+    90 / g.hexImage:getHeight(), -- sy
+    g.hexImage:getWidth() / 2, -- ox
+    g.hexImage:getHeight() / 2 -- oy
   }
 
   local screen_w = 450
   local screen_h = 800
   love.window.setMode(screen_w, screen_h, {["centered"] = true, ["resizable"] = false})
 
-  mode = "UNSELECTED"
-  FIELD = buildField()
-  FIELD.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
+  g.mode = "UNSELECTED"
+  g.field = HashTable:new()
+  for x=-2, 2 do
+    for y=-2, 3 do
+      for z=-3, 2 do
+        if (x + y + z) == 0 then
+          g.field:set(HexCoord:new(x, y, z), Hex:new())
+        end
+      end
+    end
+  end
+  g.field.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
 end
 
 
@@ -52,16 +48,16 @@ end
 
 function Hex:image()
   if self.selected then
-    return SELECTED_HEX_IMAGE
+    return g.selectedHexImage
   end
 
-  return HEX_IMAGE
+  return g.hexImage
 end
 
 function Hex:draw(hexCoord)
   local x, y = hexCoord:pixelCoordinates(HEX_SIZE)
   love.graphics.setColor(self.color)
-  love.graphics.draw(self:image(), x, y, 0, unpack(HEX_DIMENSIONS))
+  love.graphics.draw(self:image(), x, y, 0, unpack(g.hexDimensions))
   love.graphics.setColor(1, 1, 1)
 end
 
@@ -98,7 +94,7 @@ end
 
 function Selection:calcCenterCoords()
   local x, y = self.center:pixelCoordinates(HEX_SIZE)
-  x, y = FIELD.transform:transformPoint(x, y)
+  x, y = g.field.transform:transformPoint(x, y)
   self.x, self.y = self.transform:transformPoint(x, y)
 end
 
@@ -126,16 +122,16 @@ end
 
 function Selection:handleSnap()
   local diffToTargetRotation = math.abs(angleDiff(self.rotation, self.targetRotation))
-  if diffToTargetRotation < DEG_1 and math.abs(self.rotationVelocity) < 0.01 then
+  if diffToTargetRotation < DEG_1 and math.abs(self.rotationVelocity) < DEG_1 then
     self:setRotation(self.targetRotation)
     self.rotationVelocity = 0
   end
 end
 
 DEG_360 = 2 * math.pi
-DEG_60 = math.pi / 3
-DEG_90 = math.pi / 2
 DEG_180 = math.pi
+DEG_90 = math.pi / 2
+DEG_60 = math.pi / 3
 DEG_1 = math.pi / 180
 
 function snapRotation(radians)
@@ -153,45 +149,45 @@ function angleDiff(startAngle, endAngle)
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-  if mode == "NOT_DRAGGING" then
-    local fieldX, fieldY = selection.transform:inverseTransformPoint(x, y)
-    fieldX, fieldY = FIELD.transform:inverseTransformPoint(fieldX, fieldY)
+  if g.mode == "NOT_DRAGGING" then
+    local fieldX, fieldY = g.selection.transform:inverseTransformPoint(x, y)
+    fieldX, fieldY = g.field.transform:inverseTransformPoint(fieldX, fieldY)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
-    local clickedHex = FIELD:get(hexCoord)
+    local clickedHex = g.field:get(hexCoord)
     if clickedHex ~= nil and clickedHex.selected then
-      selection:calcMouseAngle(x, y)
-      selection.dragStartAngle = selection.mouseAngle
-      selection.dragStartRotation = snapRotation(selection.rotation)
-      mode = "DRAGGING"
+      g.selection:calcMouseAngle(x, y)
+      g.selection.dragStartAngle = g.selection.mouseAngle
+      g.selection.dragStartRotation = snapRotation(g.selection.rotation)
+      g.mode = "DRAGGING"
     end
   end
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
-  if mode == "DRAGGING" then
-    selection:calcMouseAngle(x, y)
+  if g.mode == "DRAGGING" then
+    g.selection:calcMouseAngle(x, y)
   end
 end
 
 function love.mousereleased(x, y, button, istouch, presses)
-  if mode == "UNSELECTED" then
-    local fieldX, fieldY = FIELD.transform:inverseTransformPoint(x, y)
+  if g.mode == "UNSELECTED" then
+    local fieldX, fieldY = g.field.transform:inverseTransformPoint(x, y)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
     local neighbors = hexCoord:neighbors()
 
-    if FIELD:contains(hexCoord, unpack(neighbors)) then
-      selection = Selection:new(hexCoord, neighbors)
+    if g.field:contains(hexCoord, unpack(neighbors)) then
+      g.selection = Selection:new(hexCoord, neighbors)
       for i, selected in ipairs(neighbors) do
-        FIELD:get(selected).selected = true
+        g.field:get(selected).selected = true
       end
-      mode = "RISING_ANIMATION"
-      animation_progress = 0
+      g.mode = "RISING_ANIMATION"
+      g.animation_progress = 0
     end
-  elseif mode == "NOT_DRAGGING" then
-    mode = "SINKING_ANIMATION"
-    animation_progress = 0
-  elseif mode == "DRAGGING" then
-    mode = "NOT_DRAGGING"
+  elseif g.mode == "NOT_DRAGGING" then
+    g.mode = "SINKING_ANIMATION"
+    g.animation_progress = 0
+  elseif g.mode == "DRAGGING" then
+    g.mode = "NOT_DRAGGING"
   end
 end
 
@@ -203,51 +199,51 @@ function lerp(a, b, t)
 end
 
 function love.update(dt)
-  if mode == "RISING_ANIMATION" then
-    animation_progress = animation_progress + dt / RISE_DURATION
-    selection:setZ(lerp(0, RISE_HEIGHT, animation_progress))
-    if selection.z >= RISE_HEIGHT then
-      selection:setZ(RISE_HEIGHT)
-      selection:calcCenterCoords()
-      mode = "NOT_DRAGGING"
+  if g.mode == "RISING_ANIMATION" then
+    g.animation_progress = g.animation_progress + dt / RISE_DURATION
+    g.selection:setZ(lerp(0, RISE_HEIGHT, g.animation_progress))
+    if g.selection.z >= RISE_HEIGHT then
+      g.selection:setZ(RISE_HEIGHT)
+      g.selection:calcCenterCoords()
+      g.mode = "NOT_DRAGGING"
     end
-  elseif mode == "SINKING_ANIMATION" then
-    animation_progress = animation_progress + dt / RISE_DURATION
-    selection:setZ(lerp(RISE_HEIGHT, 0, animation_progress))
-    if selection.z <= 0 then
-      selection:setZ(0)
-      mode = "UNSELECTED"
+  elseif g.mode == "SINKING_ANIMATION" then
+    g.animation_progress = g.animation_progress + dt / RISE_DURATION
+    g.selection:setZ(lerp(RISE_HEIGHT, 0, g.animation_progress))
+    if g.selection.z <= 0 then
+      g.selection:setZ(0)
+      g.mode = "UNSELECTED"
 
-      for i, selected in ipairs(selection.selected) do
-        FIELD:get(selected).selected = false
+      for i, selected in ipairs(g.selection.selected) do
+        g.field:get(selected).selected = false
       end
       selection = nil
     end
-  elseif mode == "DRAGGING" then
-    selection:calcTargetRotation()
-    selection:calcRotationVelocity(dt)
-    selection:setRotation(selection.rotation + selection.rotationVelocity)
-    selection:handleSnap()
+  elseif g.mode == "DRAGGING" then
+    g.selection:calcTargetRotation()
+    g.selection:calcRotationVelocity(dt)
+    g.selection:setRotation(g.selection.rotation + g.selection.rotationVelocity)
+    g.selection:handleSnap()
   end
 end
 
 function drawField()
   love.graphics.push()
-  love.graphics.applyTransform(FIELD.transform)
+  love.graphics.applyTransform(g.field.transform)
 
-  for coord, hex in FIELD:each() do
+  for coord, hex in g.field:each() do
     if not hex.selected then
       hex:draw(coord)
     end
   end
 
-  if selection ~= nil then
-    love.graphics.translate(selection.offsetX, selection.offsetY)
-    love.graphics.applyTransform(selection.transform)
+  if g.selection ~= nil then
+    love.graphics.translate(g.selection.offsetX, g.selection.offsetY)
+    love.graphics.applyTransform(g.selection.transform)
 
-    for coord, hex in FIELD:each() do
+    for coord, hex in g.field:each() do
       if hex.selected then
-        hex:draw(coord - selection.center)
+        hex:draw(coord - g.selection.center)
       end
     end
   end
