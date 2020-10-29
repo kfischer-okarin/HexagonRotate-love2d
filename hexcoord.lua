@@ -4,6 +4,10 @@ HexCoord.__eq = function(a, b)
   return a.x == b.x and a.y == b.y and a.z == b.z
 end
 
+HexCoord.__sub = function(a, b)
+  return HexCoord:new(a.x - b.x, a.y - b.y, a.z - b.z)
+end
+
 HexCoord.__tostring = function(self)
   return "HexCoord(" .. self.x .. ", " .. self.y .. ", " .. self.z .. ")"
 end

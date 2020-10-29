@@ -91,6 +91,7 @@ function Selection:new(center, selected)
   }
   setmetatable(obj, self)
   self.__index = self
+  obj.offsetX, obj.offsetY = obj.center:pixelCoordinates(HEX_SIZE)
   return obj
 end
 
@@ -254,11 +255,12 @@ function drawField()
   end
 
   if selection ~= nil then
+    love.graphics.translate(selection.offsetX, selection.offsetY)
     love.graphics.applyTransform(selection.transform)
 
     for coord, hex in field:each() do
       if hex.selected then
-        hex:draw(coord)
+        hex:draw(coord - selection.center)
       end
     end
   end
