@@ -30,15 +30,15 @@ function buildField()
 end
 
 function love.load()
-  hex = love.graphics.newImage("hex.png")
-  selectedHex = love.graphics.newImage("hex-selected.png")
+  HEX_IMAGE = love.graphics.newImage("hex.png")
+  SELECTED_HEX_IMAGE = love.graphics.newImage("hex-selected.png")
   HEX_SIZE = 50
   RISE_HEIGHT = HEX_SIZE / 2
   HEX_DIMENSIONS = {
-    90 / hex:getHeight(), -- sx
-    90 / hex:getHeight(), -- sy
-    hex:getWidth() / 2, -- ox
-    hex:getHeight() / 2 -- oy
+    90 / HEX_IMAGE:getHeight(), -- sx
+    90 / HEX_IMAGE:getHeight(), -- sy
+    HEX_IMAGE:getWidth() / 2, -- ox
+    HEX_IMAGE:getHeight() / 2 -- oy
   }
 
   local screen_w = 450
@@ -46,8 +46,8 @@ function love.load()
   love.window.setMode(screen_w, screen_h, {["centered"] = true, ["resizable"] = false})
 
   mode = "UNSELECTED"
-  field = buildField()
-  field.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
+  FIELD = buildField()
+  FIELD.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
 end
 
 
@@ -65,10 +65,10 @@ end
 
 function Hex:image()
   if self.selected then
-    return selectedHex
+    return SELECTED_HEX_IMAGE
   end
 
-  return hex
+  return HEX_IMAGE
 end
 
 function Hex:draw(hexCoord)
@@ -111,7 +111,7 @@ end
 
 function Selection:calcCenterCoords()
   local x, y = self.center:pixelCoordinates(HEX_SIZE)
-  x, y = field.transform:transformPoint(x, y)
+  x, y = FIELD.transform:transformPoint(x, y)
   self.x, self.y = self.transform:transformPoint(x, y)
 end
 
@@ -168,9 +168,9 @@ end
 function love.mousepressed(x, y, button, istouch, presses)
   if mode == "NOT_DRAGGING" then
     local fieldX, fieldY = selection.transform:inverseTransformPoint(x, y)
-    fieldX, fieldY = field.transform:inverseTransformPoint(fieldX, fieldY)
+    fieldX, fieldY = FIELD.transform:inverseTransformPoint(fieldX, fieldY)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
-    local clickedHex = field:get(hexCoord)
+    local clickedHex = FIELD:get(hexCoord)
     if clickedHex ~= nil and clickedHex.selected then
       selection:calcMouseAngle(x, y)
       selection.dragStartAngle = selection.mouseAngle
@@ -188,14 +188,14 @@ end
 
 function love.mousereleased(x, y, button, istouch, presses)
   if mode == "UNSELECTED" then
-    local fieldX, fieldY = field.transform:inverseTransformPoint(x, y)
+    local fieldX, fieldY = FIELD.transform:inverseTransformPoint(x, y)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
     local neighbors = hexCoord:neighbors()
 
-    if field:containsCoordinates(hexCoord, unpack(neighbors)) then
+    if FIELD:containsCoordinates(hexCoord, unpack(neighbors)) then
       selection = Selection:new(hexCoord, neighbors)
       for i, selected in ipairs(neighbors) do
-        field:get(selected).selected = true
+        FIELD:get(selected).selected = true
       end
       mode = "RISING_ANIMATION"
       animation_progress = 0
@@ -232,7 +232,7 @@ function love.update(dt)
       mode = "UNSELECTED"
 
       for i, selected in ipairs(selection.selected) do
-        field:get(selected).selected = false
+        FIELD:get(selected).selected = false
       end
       selection = nil
     end
@@ -246,9 +246,9 @@ end
 
 function drawField()
   love.graphics.push()
-  love.graphics.applyTransform(field.transform)
+  love.graphics.applyTransform(FIELD.transform)
 
-  for coord, hex in field:each() do
+  for coord, hex in FIELD:each() do
     if not hex.selected then
       hex:draw(coord)
     end
@@ -258,7 +258,7 @@ function drawField()
     love.graphics.translate(selection.offsetX, selection.offsetY)
     love.graphics.applyTransform(selection.transform)
 
-    for coord, hex in field:each() do
+    for coord, hex in FIELD:each() do
       if hex.selected then
         hex:draw(coord - selection.center)
       end
