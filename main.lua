@@ -110,6 +110,7 @@ function Selection:calcCenterCoords()
   self.x, self.y = self.transform:transformPoint(x, y)
 end
 
+-- Mouse angle on the selection circle: up 0 deg, right 90 deg, left 270 deg
 function Selection:calcMouseAngle(x, y)
   local offsetX = x - self.x
   local offsetY = y - self.y
