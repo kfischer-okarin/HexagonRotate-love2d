@@ -1,21 +1,8 @@
 HexCoord = require('hexcoord')
 HashTable = require('hashtable')
 
-HexField = HashTable:new()
-
-function HexField:containsCoordinates(...)
-  local arg = {...}
-  for i, coord in ipairs(arg) do
-    if self:get(coord) == nil then
-      return false
-    end
-  end
-
-  return true
-end
-
 function buildField()
-  result = HexField:new()
+  result = HashTable:new()
   for x=-2, 2 do
     for y=-2, 3 do
       for z=-3, 2 do
@@ -192,7 +179,7 @@ function love.mousereleased(x, y, button, istouch, presses)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
     local neighbors = hexCoord:neighbors()
 
-    if FIELD:containsCoordinates(hexCoord, unpack(neighbors)) then
+    if FIELD:contains(hexCoord, unpack(neighbors)) then
       selection = Selection:new(hexCoord, neighbors)
       for i, selected in ipairs(neighbors) do
         FIELD:get(selected).selected = true

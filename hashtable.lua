@@ -29,4 +29,15 @@ function HashTable:each()
   end
 end
 
+function HashTable:contains(...)
+  local arg = {...}
+  for i, value in ipairs(arg) do
+    if self:get(value) == nil then
+      return false
+    end
+  end
+
+  return true
+end
+
 return HashTable
