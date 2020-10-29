@@ -1,3 +1,5 @@
+local util = require('util')
+
 local HexCoord = {}
 
 HexCoord.__eq = function(a, b)
@@ -74,5 +76,21 @@ function HexCoord:neighbors()
     HexCoord:new(self.x, self.y - 1, self.z + 1)
   }
 end
+
+local DEG_60 = math.pi / 3
+
+function HexCoord:rotate(degrees, rotationCenter)
+  local dx = self.x - rotationCenter.x
+  local dy = self.y - rotationCenter.y
+  local dz = self.z - rotationCenter.z
+  for rotations=1, util.round(degrees / DEG_60) do
+    local oldX = dx
+    dx = -dz
+    dz = -dy
+    dy = -oldX
+  end
+  return HexCoord:new(rotationCenter.x + dx, rotationCenter.y + dy, rotationCenter.z + dz)
+end
+
 
 return HexCoord

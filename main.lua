@@ -1,5 +1,6 @@
 g = {}
 
+util = require('util')
 HexCoord = require('hexcoord')
 HashTable = require('hashtable')
 
@@ -150,7 +151,7 @@ DEG_60 = math.pi / 3
 DEG_1 = math.pi / 180
 
 function snapRotation(radians)
-  return math.floor((radians % DEG_360) / DEG_60 + 0.5) * DEG_60
+  return util.round((radians % DEG_360) / DEG_60) * DEG_60
 end
 
 function angleDiff(startAngle, endAngle)
@@ -229,8 +230,17 @@ function love.update(dt)
       g.selection:setZ(0)
       g.mode = "UNSELECTED"
 
+      local hexes = HashTable:new()
       for i, selected in ipairs(g.selection.selected) do
-        g.field:get(selected).selected = false
+        hexes:set(selected, g.field:get(selected))
+      end
+
+      for i, selected in ipairs(g.selection.selected) do
+        local hex = hexes:get(selected)
+
+        local rotatedCoord = selected:rotate(g.selection.rotation, g.selection.center)
+        g.field:set(rotatedCoord, hex)
+        hex.selected = false
       end
       selection = nil
     end
