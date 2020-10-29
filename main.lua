@@ -72,9 +72,9 @@ function Hex:image()
 end
 
 function Hex:draw(hexCoord)
-  local position = hexCoord:pixelCoordinates(HEX_SIZE)
+  local x, y = hexCoord:pixelCoordinates(HEX_SIZE)
   love.graphics.setColor(self.color)
-  love.graphics.draw(self:image(), position.x, position.y, 0, unpack(HEX_DIMENSIONS))
+  love.graphics.draw(self:image(), x, y, 0, unpack(HEX_DIMENSIONS))
   love.graphics.setColor(1, 1, 1)
 end
 
@@ -109,8 +109,8 @@ function Selection:setRotation(value)
 end
 
 function Selection:calcCenterCoords()
-  local coords = self.center:pixelCoordinates(HEX_SIZE)
-  local x, y = field.transform:transformPoint(coords.x, coords.y)
+  local x, y = self.center:pixelCoordinates(HEX_SIZE)
+  x, y = field.transform:transformPoint(x, y)
   self.x, self.y = self.transform:transformPoint(x, y)
 end
 

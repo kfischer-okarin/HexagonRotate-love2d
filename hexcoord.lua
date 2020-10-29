@@ -17,7 +17,7 @@ end
 function HexCoord:pixelCoordinates(size)
   local x = size * 1.5 * self.x
   local y = size * (SQRT_3 / 2 * self.x + SQRT_3 * self.z)
-  return {["x"] = x, ["y"] = y}
+  return x, y
 end
 
 function HexCoord:new(x, y, z)
