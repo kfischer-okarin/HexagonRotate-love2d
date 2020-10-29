@@ -70,6 +70,8 @@ function Selection:new(center, selected)
     ["z"] = 0,
     ["rotation"] = 0,
     ["rotationVelocity"] = 0,
+    ["dragStartRotation"] = 0,
+    ["targetRotation"] = 0,
     ["transform"] = love.math.newTransform()
   }
   setmetatable(obj, self)
@@ -108,6 +110,13 @@ function Selection:calcMouseAngle(x, y)
   self.mouseAngle = result
 end
 
+function Selection:startRotation(x, y)
+  self:calcMouseAngle(x, y)
+  self.dragStartAngle = self.mouseAngle
+  self.dragStartRotation = snapRotation(self.rotation)
+  self.targetRotation = self.dragStartRotation
+end
+
 function Selection:calcTargetRotation()
   local dragRotation = angleDiff(self.dragStartAngle, self.mouseAngle)
   local snappedDragRotation = snapRotation(dragRotation)
@@ -126,6 +135,12 @@ function Selection:handleSnap()
     self:setRotation(self.targetRotation)
     self.rotationVelocity = 0
   end
+end
+
+function Selection:handleRotation(dt)
+  self:calcRotationVelocity(dt)
+  self:setRotation(self.rotation + self.rotationVelocity)
+  self:handleSnap()
 end
 
 DEG_360 = 2 * math.pi
@@ -155,9 +170,7 @@ function love.mousepressed(x, y, button, istouch, presses)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
     local clickedHex = g.field:get(hexCoord)
     if clickedHex ~= nil and clickedHex.selected then
-      g.selection:calcMouseAngle(x, y)
-      g.selection.dragStartAngle = g.selection.mouseAngle
-      g.selection.dragStartRotation = snapRotation(g.selection.rotation)
+      g.selection:startRotation(x, y)
       g.mode = "DRAGGING"
     end
   end
@@ -184,8 +197,10 @@ function love.mousereleased(x, y, button, istouch, presses)
       g.animation_progress = 0
     end
   elseif g.mode == "NOT_DRAGGING" then
-    g.mode = "SINKING_ANIMATION"
-    g.animation_progress = 0
+    if g.selection.rotationVelocity == 0 then
+      g.mode = "SINKING_ANIMATION"
+      g.animation_progress = 0
+    end
   elseif g.mode == "DRAGGING" then
     g.mode = "NOT_DRAGGING"
   end
@@ -221,9 +236,9 @@ function love.update(dt)
     end
   elseif g.mode == "DRAGGING" then
     g.selection:calcTargetRotation()
-    g.selection:calcRotationVelocity(dt)
-    g.selection:setRotation(g.selection.rotation + g.selection.rotationVelocity)
-    g.selection:handleSnap()
+    g.selection:handleRotation(dt)
+  elseif g.mode == "NOT_DRAGGING" then
+    g.selection:handleRotation(dt)
   end
 end
 
