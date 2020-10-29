@@ -9,7 +9,7 @@ function loadImages()
   g.selectedHexImage = love.graphics.newImage("hex-selected.png")
   HEX_SIZE = 50
   RISE_HEIGHT = HEX_SIZE / 2
-  g.hexDimensions = {
+  Hex.dimensions = {
     90 / g.hexImage:getHeight(), -- sx
     90 / g.hexImage:getHeight(), -- sy
     g.hexImage:getWidth() / 2, -- ox
@@ -67,7 +67,7 @@ end
 function Hex:draw(hexCoord)
   local x, y = hexCoord:pixelCoordinates(HEX_SIZE)
   love.graphics.setColor(self.color)
-  love.graphics.draw(self:image(), x, y, 0, unpack(g.hexDimensions))
+  love.graphics.draw(self:image(), x, y, 0, unpack(self.dimensions))
   love.graphics.setColor(1, 1, 1)
 end
 
