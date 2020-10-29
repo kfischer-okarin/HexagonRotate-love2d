@@ -4,7 +4,7 @@ util = require('util')
 HexCoord = require('hexcoord')
 HashTable = require('hashtable')
 
-function love.load()
+function loadImages()
   g.hexImage = love.graphics.newImage("hex.png")
   g.selectedHexImage = love.graphics.newImage("hex-selected.png")
   HEX_SIZE = 50
@@ -15,11 +15,15 @@ function love.load()
     g.hexImage:getWidth() / 2, -- ox
     g.hexImage:getHeight() / 2 -- oy
   }
+end
 
-  local screen_w = 450
-  local screen_h = 800
-  love.window.setMode(screen_w, screen_h, {["centered"] = true, ["resizable"] = false})
+function setWindowSize()
+  SCREEN_W = 450
+  SCREEN_H = 800
+  love.window.setMode(SCREEN_W, SCREEN_H, {["centered"] = true, ["resizable"] = false})
+end
 
+function initializeState()
   g.mode = "UNSELECTED"
   g.field = HashTable:new()
   for x=-2, 2 do
@@ -31,9 +35,14 @@ function love.load()
       end
     end
   end
-  g.field.transform = love.math.newTransform(screen_w / 2, screen_h / 2)
+  g.field.transform = love.math.newTransform(SCREEN_W / 2, SCREEN_H / 2)
 end
 
+function love.load()
+  loadImages()
+  setWindowSize()
+  initializeState()
+end
 
 Hex = {}
 
