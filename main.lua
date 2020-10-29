@@ -170,7 +170,7 @@ function love.mousepressed(x, y, button, istouch, presses)
     fieldX, fieldY = field.transform:inverseTransformPoint(fieldX, fieldY)
     local hexCoord = HexCoord:fromPixelCoordinate(fieldX, fieldY, HEX_SIZE)
     local clickedHex = field:get(hexCoord)
-    if clickedHex.selected then
+    if clickedHex ~= nil and clickedHex.selected then
       selection:calcMouseAngle(x, y)
       selection.dragStartAngle = selection.mouseAngle
       selection.dragStartRotation = snapRotation(selection.rotation)
